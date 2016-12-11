@@ -8,7 +8,9 @@ public class Grid {
   private System.Random rnd;
   private List<Tile> tiles;
 
-  public void Create(int w, int h, Sprite boardSprite, int seed = 0) {
+  public Grid(int w, int h, Sprite boardSprite, int seed = 0) {
+    int x;
+    int y;
     width = w;
     height = h;
 
@@ -16,18 +18,11 @@ public class Grid {
     if (seed > 0) rnd = new System.Random(seed);
 
     for (var i = w * h; i > 0; i--) {
-      tiles.Add(Tile.Create(boardSprite, null));
+      var tile = Tile.Create(boardSprite, null);
+      var tileRect = new TwoDee(tile.gameObject);
     }
+
+
   }
 
-
-	// Use this for initialization
-	void Start () {
-
-	}
-
-	// Update is called once per frame
-	void Update () {
-
-	}
 }

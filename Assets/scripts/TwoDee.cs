@@ -3,7 +3,7 @@ using UnityEngine;
 public class TwoDee {
   public GameObject gameObject;
 
-  TwoDee(GameObject newGameObj) {
+  public TwoDee(GameObject newGameObj) {
     gameObject = newGameObj;
   }
 
