@@ -1,11 +1,52 @@
 using UnityEngine;
 
-public class Tile : ScriptableObject {
-  public enum Orientation {UP, DOWN, LEFT, RIGHT};
+[RequireComponent (typeof(Sprite))]
+public class Tile : MonoBehaviour {
+  /*
+    Tracks:
+      GameObject (actual in-scene object)
+      Tile type/sprite
+      Overlay type/sprite
+      Overlay behavior?
 
-  public GameObject layerBase;
-  public GameObject layerIcon;
-  public Orientation orientation;
+      OnTriggerEnter
+      OnTriggerStay
+      OnTriggerExit
+  */
 
-  // public float width { get { return layerBase.GetComponent< }}
+  public enum Types {STANDARD, ICE};
+
+  private Sprite baseSprite;
+  private Sprite overlaySprite;
+  private GameObject baseLayer;
+  private GameObject overlayLayer;
+
+  private bool isInitialized;
+
+  public static Tile Create(Sprite baseTileSprite, Sprite overlayTileSprite = null) {
+    var gobj = new GameObject("Tile");
+    var tile = gobj.AddComponent<Tile>();
+    tile.Init(baseTileSprite, overlayTileSprite);
+    return tile;
+  }
+
+  void Init(Sprite baseTileSprite, Sprite overlayTileSprite = null) {
+    if (isInitialized) return;
+
+    isInitialized = true;
+
+    baseSprite = baseTileSprite;
+    overlaySprite = overlayTileSprite;
+
+    baseLayer = addLayerChild("TileBaseLayer", baseSprite);
+    overlayLayer = addLayerChild("TileOverlayLayer", overlaySprite);
+  }
+
+  private GameObject addLayerChild(string objName, Sprite sprite) {
+    var layer = new GameObject(objName);
+    var spriteComponent = baseLayer.AddComponent<SpriteRenderer>();
+    spriteComponent.sprite = sprite;
+    layer.transform.parent = this.gameObject.transform;
+    return layer;
+  }
 }

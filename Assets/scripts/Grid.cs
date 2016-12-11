@@ -1,22 +1,23 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System.Collections.Generic;
 
 public class Grid {
   public int width;
   public int height;
 
-  private BoardConfig config;
   private System.Random rnd;
   private List<Tile> tiles;
 
-  public void Create(int w, int h, BoardConfig cfg) {
+  public void Create(int w, int h, Sprite boardSprite, int seed = 0) {
     width = w;
     height = h;
-    config = cfg;
 
     rnd = new System.Random();
-    if (cfg.seed > 0) rnd = new System.Random(cfg.seed);
+    if (seed > 0) rnd = new System.Random(seed);
 
+    for (var i = w * h; i > 0; i--) {
+      tiles.Add(Tile.Create(boardSprite, null));
+    }
   }
 
 

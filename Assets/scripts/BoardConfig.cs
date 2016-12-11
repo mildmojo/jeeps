@@ -1,11 +1,11 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.Linq;
 
 [System.Serializable]
 public class BoardConfig {
   public int seed = 0;
 
-  public List<NamedTiles> tilePrefabs;
 }
 
 [System.Serializable]
