@@ -6,6 +6,7 @@ public class AnyInput : MonoBehaviour {
   public static AnyInput instance;
 
   private bool isRunning;
+  private bool isAnyDown;
   private readonly List<KeyCode> wasPressedInputs = new List<KeyCode>();
   private readonly List<KeyCode> wasReleasedInputs = new List<KeyCode>();
   private readonly Dictionary<KeyCode, bool> inputStates = new Dictionary<KeyCode, bool>();
@@ -34,12 +35,16 @@ public class AnyInput : MonoBehaviour {
     isRunning = true;
   }
 
+  public bool AnyDown() {
+    return isAnyDown;
+  }
+
   public bool WasPressed() {
-    return wasPressedInputs.Count > 0;
+    return wasPressedInputs.Any();
   }
 
   public bool WasReleased() {
-    return wasReleasedInputs.Count > 0;
+    return wasReleasedInputs.Any();
   }
 
   public List<KeyCode> GetAllPressed() {
@@ -67,6 +72,7 @@ public class AnyInput : MonoBehaviour {
       if (oldIsDown && !isDown) wasReleasedInputs.Add(code);
       // Store state.
       inputStates[code] = isDown;
+      isAnyDown = isAnyDown || isDown;
     }
   }
 }

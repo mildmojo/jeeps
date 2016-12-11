@@ -6,7 +6,7 @@ using System.Linq;
 public class PlayerController : MonoBehaviour {
   public bool isJumping;
   public bool isMoving;
-  public Vector3 direction;
+  public Vector3 direction = Vector3.up;
 
   public System.Action<KeyCode> OnRebind;
   public string buttonName;
