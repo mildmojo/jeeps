@@ -1,0 +1,24 @@
+fileFormatVersion: 2
+guid: ec609c380f8c74027a6b687a461adb5e
+timeCreated: 1481495071
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontNames:
+  - BioRhyme Expanded
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 8001e991830a642d9bbfc8ae36e9cb22, type: 3}
+  - {fileID: 12800000, guid: be5e25a3222ad45ee87779d00900b732, type: 3}
+  - {fileID: 12800000, guid: b3636447d3fe34f0aa00aa426bff3eed, type: 3}
+  - {fileID: 12800000, guid: 725f636c349f143a3accc35e6a18344e, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

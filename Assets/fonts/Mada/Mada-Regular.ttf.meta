@@ -1,0 +1,23 @@
+fileFormatVersion: 2
+guid: f528b8f1f5382421f954f3df411aecec
+timeCreated: 1481495071
+licenseType: Free
+TrueTypeFontImporter:
+  serializedVersion: 4
+  fontSize: 16
+  forceTextureCase: -2
+  characterSpacing: 0
+  characterPadding: 1
+  includeFontData: 1
+  fontNames:
+  - Mada
+  fallbackFontReferences:
+  - {fileID: 12800000, guid: 90aca961b130845348cec7c4494cf04e, type: 3}
+  - {fileID: 12800000, guid: 16ae3b3db000146969a1dc04f6fa25f9, type: 3}
+  - {fileID: 12800000, guid: af07532f62ca649549be2aebb6a12cb4, type: 3}
+  customCharacters: 
+  fontRenderingMode: 0
+  ascentCalculationMode: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
