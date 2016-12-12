@@ -1,10 +1,9 @@
 public static class GameState {
-  public const int ATTRACT = 0;
-  public const int MENU = 1;
-  public const int SETUP = 2;
-  public const int INIT = 3;
-  public const int PLAYING = 4;
-  public const int GAMEOVER = 5;
+  public const int ATTRACT  = 0;
+  public const int SETUP    = 1;
+  public const int INIT     = 2;
+  public const int PLAYING  = 3;
+  public const int GAMEOVER = 4;
 
   public static System.Action<int, int> OnStateChange;
 

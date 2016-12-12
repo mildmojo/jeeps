@@ -12,12 +12,14 @@ public class GameManager : MonoBehaviour {
   public float gameSpeed = 0.5f;
   public float countdownLength;
   public Text timerText;
+  public GameObject boardRootObject;
 
-public GameObject tilePrefab;
+  public GameObject tilePrefab;
+
   private CanvasGroup cgTimerText;
   private List<PlayerController> _players = new List<PlayerController>();
   private float _countdownTimer;
-  // private  board;
+  private List<Tile> board;
 
   private Dictionary<int, System.Action> _updateActions;
 
@@ -26,8 +28,7 @@ public GameObject tilePrefab;
     cgTimerText = timerText.GetComponent<CanvasGroup>();
 
     _updateActions = new Dictionary<int, System.Action> {
-      { GameState.ATTRACT,  () => {} },
-      { GameState.MENU,     () => {} },
+      { GameState.ATTRACT,  CheckStart },
       { GameState.SETUP,    CountdownToStart },
       { GameState.INIT,     () => {} },
       { GameState.PLAYING,  GameplayTick },
@@ -36,6 +37,7 @@ public GameObject tilePrefab;
   }
 
   void Start() {
+    FindBoard();
     // players.Add(GameObject.Find("jeep_pink").GetComponent<PlayerController>());
 
     // players.First().OnRebind += code => {
@@ -79,9 +81,28 @@ public GameObject tilePrefab;
     _updateActions[GameState.State]();
   }
 
-  void GameplayTick() {
-    foreach(var player in _players) {
-      player.gameObject.transform.Translate(player.direction * gameSpeed * Time.deltaTime);
+  void FindBoard() {
+    var children = new List<GameObject>();
+    for (var i = 0; i < boardRootObject.transform.childCount; i++) {
+      children.Add(boardRootObject.transform.GetChild(i).gameObject);
+    }
+
+    children.Sort((v1, v2) => CompareVectors(v1.transform.position, v2.transform.position));
+    board = children
+      .Select(child => child.GetComponent<Tile>())
+      .ToList();
+  }
+
+  void CheckStart() {
+    if (AnyInput.instance.WasPressed()) {
+      _countdownTimer = countdownLength;
+      foreach (var player in _players) {
+        player.StartInputRebind();
+        // Set up an OnRebind listener that remembers which player is on which
+        // button if that button is released during setup, hide player and start
+        // player's rebind again
+      }
+      GameState.SetState(GameState.SETUP);
     }
   }
 
@@ -90,10 +111,11 @@ public GameObject tilePrefab;
 
     // All buttons released? Return to attract mode.
     if (!AnyInput.instance.AnyDown()) {
+      timerText.text = "";
       GameState.SetState(GameState.ATTRACT);
     }
 
-    // Any input pressed in the last frame? Reset the counter.
+    // Any input pressed in the last frame? Reset the timer.
     if (AnyInput.instance.WasPressed()) {
       _countdownTimer = countdownLength;
     }
@@ -105,7 +127,25 @@ public GameObject tilePrefab;
       LeanTween.value(gameObject, value => cgTimerText.alpha = value, 1f, 0f, 2f);
       GameState.SetState(GameState.PLAYING);
     }
+  }
 
+  void GameplayTick() {
+    foreach(var player in _players) {
+      player.gameObject.transform.Translate(player.direction * gameSpeed * Time.deltaTime);
+    }
+  }
 
+  // Sort top-to-bottom, with Unity origin at bottom-left of screen.
+  int CompareVectors(Vector3 v1, Vector3 v2) {
+    if (v1.y > v2.y)
+        return -1;
+    if (v1.y == v2.y)
+    {
+        if (v1.x == v2.x)
+            return 0;
+        if (v1.x < v2.x)
+            return -1;
+    }
+    return 1;
   }
 }

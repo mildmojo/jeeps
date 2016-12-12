@@ -16,37 +16,40 @@ public class Tile : MonoBehaviour {
 
   public enum Types {STANDARD, ICE};
 
-  private Sprite baseSprite;
-  private Sprite overlaySprite;
-  private GameObject baseLayer;
-  private GameObject overlayLayer;
+  public int x;
+  public int y;
 
-  private bool isInitialized;
+  public Sprite baseSprite;
+  public Sprite overlaySprite;
+  public GameObject baseLayer;
+  public GameObject overlayLayer;
 
-  public static Tile Create(Sprite baseTileSprite, Sprite overlayTileSprite = null) {
-    var gobj = new GameObject("Tile");
-    var tile = gobj.AddComponent<Tile>();
-    tile.Init(baseTileSprite, overlayTileSprite);
-    return tile;
-  }
+  // private bool isInitialized;
 
-  void Init(Sprite baseTileSprite, Sprite overlayTileSprite = null) {
-    if (isInitialized) return;
+  // public static Tile Create(Sprite baseTileSprite, Sprite overlayTileSprite = null) {
+  //   var gobj = new GameObject("Tile");
+  //   var tile = gobj.AddComponent<Tile>();
+  //   tile.Init(baseTileSprite, overlayTileSprite);
+  //   return tile;
+  // }
 
-    isInitialized = true;
+  // void Init(Sprite baseTileSprite, Sprite overlayTileSprite = null) {
+  //   if (isInitialized) return;
 
-    baseSprite = baseTileSprite;
-    overlaySprite = overlayTileSprite;
+  //   isInitialized = true;
 
-    baseLayer = addLayerChild("TileBaseLayer", baseSprite);
-    overlayLayer = addLayerChild("TileOverlayLayer", overlaySprite);
-  }
+  //   baseSprite = baseTileSprite;
+  //   overlaySprite = overlayTileSprite;
 
-  private GameObject addLayerChild(string objName, Sprite sprite) {
-    var layer = new GameObject(objName);
-    var spriteComponent = baseLayer.AddComponent<SpriteRenderer>();
-    spriteComponent.sprite = sprite;
-    layer.transform.parent = this.gameObject.transform;
-    return layer;
-  }
+  //   baseLayer = addLayerChild("TileBaseLayer", baseSprite);
+  //   overlayLayer = addLayerChild("TileOverlayLayer", overlaySprite);
+  // }
+
+  // private GameObject addLayerChild(string objName, Sprite sprite) {
+  //   var layer = new GameObject(objName);
+  //   var spriteComponent = baseLayer.AddComponent<SpriteRenderer>();
+  //   spriteComponent.sprite = sprite;
+  //   layer.transform.parent = this.gameObject.transform;
+  //   return layer;
+  // }
 }
