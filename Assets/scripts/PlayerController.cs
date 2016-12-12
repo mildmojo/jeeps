@@ -38,7 +38,7 @@ public class PlayerController : MonoBehaviour {
   public void SetInputButton(KeyCode code) {
     buttonCode = code;
     buttonName = AllButtons.namesByValue[code];
-    OnRebind(code);
+    if (OnRebind != null) OnRebind(code);
   }
 
   public void StartInputRebind() {

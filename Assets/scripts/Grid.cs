@@ -17,10 +17,10 @@ public class Grid {
     rnd = new System.Random();
     if (seed > 0) rnd = new System.Random(seed);
 
-    for (var i = w * h; i > 0; i--) {
-      var tile = Tile.Create(boardSprite, null);
-      var tileRect = new TwoDee(tile.gameObject);
-    }
+    // for (var i = w * h; i > 0; i--) {
+    //   var tile = Tile.Create(boardSprite, null);
+    //   var tileRect = new TwoDee(tile.gameObject);
+    // }
 
 
   }

@@ -93,6 +93,13 @@ public class GameManager : MonoBehaviour {
       .ToList();
   }
 
+  void PopulateBoard() {
+    for (var i = 0; i < boardWidth; i++) {
+      var tile = board[i];
+
+    }
+  }
+
   void CheckStart() {
     if (AnyInput.instance.WasPressed()) {
       _countdownTimer = countdownLength;
@@ -102,6 +109,7 @@ public class GameManager : MonoBehaviour {
         // button if that button is released during setup, hide player and start
         // player's rebind again
       }
+      PopulateBoard();
       GameState.SetState(GameState.SETUP);
     }
   }

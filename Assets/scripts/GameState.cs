@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public static class GameState {
   public const int ATTRACT  = 0;
   public const int SETUP    = 1;
@@ -17,5 +19,6 @@ public static class GameState {
     var oldState = _state;
     _state = newState;
     if (OnStateChange != null) OnStateChange(oldState,  newState);
+    Debug.Log("State change " + oldState + " => " + newState);
   }
 }
