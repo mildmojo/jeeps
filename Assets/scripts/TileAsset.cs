@@ -1,11 +1,15 @@
 using UnityEngine;
+using System.Collections.Generic;
 
-public class TileAsset : ScriptableObject {
+public abstract class TileAsset : MonoBehaviour {
   public enum Orientation {UP, DOWN, LEFT, RIGHT};
 
-  public Sprite layerBase;
-  public Sprite layerIcon;
-  public Orientation orientation;
+  public Orientation iconOrientation;
+  public Sprite layerBaseSprite;
+  public Sprite layerIconSprite;
+  public GameObject baseLayer;
+  public GameObject overlayLayer;
+
 
   // public float x          { get { return twodee.x; } }
   // public float y          { get { return twodee.y; } }
@@ -18,7 +22,13 @@ public class TileAsset : ScriptableObject {
 
   // private TwoDee twodee;
 
-  public abstract void OnPlayerEnter();
-  public abstract void OnPlayerArrive();
-  public abstract void OnPlayeExit();
+  void OnAwake() {
+    if (layerBaseSprite != null) baseLayer.GetComponent<SpriteRenderer>().sprite = layerBaseSprite;
+    overlayLayer.GetComponent<SpriteRenderer>().sprite = layerIconSprite;
+    Debug.Log("Icon sprite was null: " + (layerIconSprite == null));
+  }
+
+  public abstract void OnPlayerEnter(PlayerController player, List<Tile> board);
+  public abstract void OnPlayerArrive(PlayerController player, List<Tile> board);
+  public abstract void OnPlayeExit(PlayerController player, List<Tile> board);
 }
