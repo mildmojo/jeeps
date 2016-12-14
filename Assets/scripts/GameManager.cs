@@ -23,6 +23,9 @@ public class GameManager : MonoBehaviour {
 
   private Dictionary<int, System.Action> _updateActions;
 
+  private List<Vector2> playersFrom = new List<Vector2>();
+  private List<Vector2> playersTo = new List<Vector2>();
+
   void Awake() {
     _players = GameObject.FindObjectsOfType<PlayerController>().ToList();
     cgTimerText = timerText.GetComponent<CanvasGroup>();
@@ -133,6 +136,18 @@ public class GameManager : MonoBehaviour {
     } else {
       timerText.text = "GO!!";
       LeanTween.value(gameObject, value => cgTimerText.alpha = value, 1f, 0f, 2f);
+
+      playersFrom.Clear();
+      playersTo.Clear();
+      for (var i = 0; i < _players.Count; i++) {
+        var player = _players[i];
+        var startingPos = player.transform.position;
+        var startingTile = getTile(i + 2, boardHeight - 1);
+        playersFrom.Add(new Vector2(startingPos.x, startingPos.y));
+        playersTo.Add(new Vector2(startingTile.x, startingTile.y));
+        player.SetDirection(playersTo[i] - playersFrom[i]);
+      }
+
       GameState.SetState(GameState.PLAYING);
     }
   }
@@ -155,5 +170,9 @@ public class GameManager : MonoBehaviour {
             return -1;
     }
     return 1;
+  }
+
+  Tile getTile(int x, int y) {
+    return board[y * boardWidth + x];
   }
 }

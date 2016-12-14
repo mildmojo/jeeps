@@ -14,15 +14,17 @@ public class Tile : MonoBehaviour {
       OnTriggerExit
   */
 
-  public enum Types {STANDARD, ICE};
+  // public enum Types {STANDARD, ICE};
 
+  [HideInInspector] [System.NonSerialized]
   public int x;
+  [HideInInspector] [System.NonSerialized]
   public int y;
 
-  public Sprite baseSprite;
-  public Sprite overlaySprite;
-  public GameObject baseLayer;
-  public GameObject overlayLayer;
+  // public Sprite baseSprite;
+  // public Sprite overlaySprite;
+  // public GameObject baseLayer;
+  // public GameObject overlayLayer;
 
   // private bool isInitialized;
 

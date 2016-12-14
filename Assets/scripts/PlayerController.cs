@@ -48,4 +48,9 @@ public class PlayerController : MonoBehaviour {
   public void StopInputRebind() {
     isRebinding = false;
   }
+
+  public void SetDirection(Vector3 newDirection) {
+    direction = newDirection;
+    transform.up = direction;
+  }
 }
