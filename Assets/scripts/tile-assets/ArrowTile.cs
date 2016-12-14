@@ -19,8 +19,10 @@ public class ArrowTile : MonoBehaviour {
     overlaySprite.up = dirVector;
   }
 
-  void OnPlayerArrive(PlayerController player) {
+  void OnPlayerArrive(object p) {
+    var player = (PlayerController) p;
     player.SetDirection(dirVector);
+    Debug.Log("Finished OnPlayerArrive in ArrowTile");
   }
 
   // public override void OnPlayerEnter(PlayerController player, List<Tile> board) {
