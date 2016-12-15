@@ -7,11 +7,19 @@ using System.Linq;
 public class GameManager : MonoBehaviour {
   public Sprite stoneTileSprite;
   public Sprite iceTileSprite;
+  public GameObject stoneTilePrefab;
+  public GameObject iceTilePrefab;
+  public GameObject playerPrefab;
+  [RangeAttribute(1, 10)]
+  public int maxPlayers;
   public int boardWidth;
   public int boardHeight;
+  [RangeAttribute(0f, 1f)]
+  public float boardDensity;
   public float gameSpeed = 0.5f;
   public float countdownLength;
   public Text timerText;
+  public GameObject playerRootObject;
   public GameObject boardRootObject;
 
   public List<GameObject> tilePrefabs;
@@ -26,12 +34,16 @@ public class GameManager : MonoBehaviour {
 
   private List<Vector3> playersSrc = new List<Vector3>();
   private List<Vector3> playersDest = new List<Vector3>();
-  private List<float> playersSqrLegDistance = new List<float>();
   private List<Tile> playersSrcTile = new List<Tile>();
   private List<Tile> playersDestTile = new List<Tile>();
 
   void Awake() {
-    _players = GameObject.FindObjectsOfType<PlayerController>().ToList();
+    for (var i = 0; i < maxPlayers; i++) {
+      var newPlayer = Instantiate(playerPrefab);
+      _players.Add(newPlayer.GetComponent<PlayerController>());
+      newPlayer.transform.parent = playerRootObject.transform;
+    }
+
     cgTimerText = timerText.GetComponent<CanvasGroup>();
 
     _updateActions = new Dictionary<int, System.Action> {
@@ -42,11 +54,14 @@ public class GameManager : MonoBehaviour {
       { GameState.GAMEOVER, () => {} },
     };
 
-    tileDeck = new ShuffleDeck(tilePrefabs);
+    tileDeck = new ShuffleDeck(tilePrefabs.Concat(tilePrefabs));
   }
 
   void Start() {
     FindBoard();
+    ResetPlayers();
+
+    GameState.OnStateChange += OnStateChange;
     // players.Add(GameObject.Find("jeep_pink").GetComponent<PlayerController>());
 
     // players.First().OnRebind += code => {
@@ -70,7 +85,33 @@ public class GameManager : MonoBehaviour {
   }
 
   void Reset() {
-    _players = new List<PlayerController>();
+    ResetPlayers();
+  }
+
+  void ResetPlayers() {
+    var marginLeft = Mathf.FloorToInt((boardWidth - _players.Count) / 2f);
+    for (var i = 0; i < _players.Count; i++) {
+      var player = _players[i];
+      var player2d = new TwoDee(player.gameObject.transform.FindChild("JeepSprite").gameObject);
+      player.transform.position = new Vector2(board[marginLeft + i].transform.position.x, -player2d.height);
+Debug.Log(player.transform.position);
+    }
+  }
+
+  void OnStateChange(int oldState, int newState) {
+    switch (newState) {
+      case GameState.SETUP:
+        _countdownTimer = countdownLength;
+        foreach (var player in _players) {
+          player.StartInputRebind();
+          // Set up an OnRebind listener that remembers which player is on which
+          // button if that button is released during setup, hide player and start
+          // player's rebind again
+        }
+        PopulateBoard();
+
+        break;
+    }
   }
 
   // Was used to generate board prefab.
@@ -103,9 +144,15 @@ public class GameManager : MonoBehaviour {
   }
 
   void PopulateBoard() {
+    GameObject newTileObject;
+
     for (var i = 0; i < board.Count; i++) {
       var tile = board[i];
-      var newTileObject = (GameObject) Instantiate((GameObject) tileDeck.Draw(), tile.transform.position, Quaternion.identity);
+      if (Random.Range(0f, 1f) < boardDensity) {
+        newTileObject = (GameObject) Instantiate((GameObject) tileDeck.Draw(), tile.transform.position, Quaternion.identity);
+      } else {
+        newTileObject = (GameObject) Instantiate(stoneTilePrefab, tile.transform.position, Quaternion.identity);
+      }
       newTileObject.transform.parent = tile.transform.parent;
       var newTile = newTileObject.GetComponent<Tile>();
       board[i] = newTile;
@@ -117,14 +164,6 @@ public class GameManager : MonoBehaviour {
 
   void CheckStart() {
     if (AnyInput.instance.WasPressed()) {
-      _countdownTimer = countdownLength;
-      foreach (var player in _players) {
-        player.StartInputRebind();
-        // Set up an OnRebind listener that remembers which player is on which
-        // button if that button is released during setup, hide player and start
-        // player's rebind again
-      }
-      PopulateBoard();
       GameState.SetState(GameState.SETUP);
     }
   }
@@ -157,7 +196,6 @@ public class GameManager : MonoBehaviour {
         var startingTile = getTile(i + 2, boardHeight - 1);
         playersSrc.Add(new Vector2(startingPos.x, startingPos.y));
         playersDest.Add(new Vector2(startingTile.transform.position.x, startingTile.transform.position.y));
-        playersSqrLegDistance.Add((playersDest[i] - playersSrc[i]).sqrMagnitude);
         playersSrcTile.Add(null);
         playersDestTile.Add(startingTile);
         player.SetDirection(playersDest[i] - playersSrc[i]);
@@ -173,32 +211,51 @@ public class GameManager : MonoBehaviour {
 
     for (var i = 0; i < _players.Count; i++) {
       var player = _players[i];
+
       var sqrBeforeDist = (player.transform.position - (Vector3) playersSrc[i]).sqrMagnitude;
-      player.transform.Translate(player.direction * gameSpeed * Time.deltaTime, Space.World);
+      var vecTravel = player.direction * gameSpeed * Time.deltaTime;
+      player.transform.Translate(vecTravel, Space.World);
       var sqrAfterDist = (player.transform.position - (Vector3) playersSrc[i]).sqrMagnitude;
+
+Debug.DrawRay(player.transform.position, (Vector3) playersDest[i] - player.transform.position);
+
+      // This may mess up if jump happens before tile midpoint; animation may
+      // jump to 0.25, then go back to 0, then up to 1.0.
+      if (player.StartedJump()) {
+        player.SetTravelDist(tileWidth);
+      } else if (player.IsJumping()) {
+        player.Travel(vecTravel.magnitude);
+      }
 
       // Check for exit/enter.
       if (sqrBeforeDist < sqrTileWidth/2f && sqrAfterDist >= sqrTileWidth/2f) {
-        if (playersSrcTile[i] != null) playersSrcTile[i].SendMessage("OnPlayerExit", player);
-        if (playersDestTile[i] != null) playersDestTile[i].SendMessage("OnPlayerEnter", player);
+        // Don't interact with tile if jumping.
+        if (!player.IsJumping()) {
+          if (playersSrcTile[i] != null) playersSrcTile[i].SendMessage("OnPlayerExit", player);
+          if (playersDestTile[i] != null) playersDestTile[i].SendMessage("OnPlayerEnter", player);
+        }
         // Need to wrap?
         if (Vector3.Dot(playersDest[i] - playersSrc[i], player.direction) < 0) {
+          // Place player on the outer edge of the tile on the opposite side of the board.
           player.transform.position = playersDest[i] + -player.direction.normalized * tileWidth/2f;
+          // Pretend player is coming from midpoint of non-existent tile off the edge of the board.
           playersSrc[i] = playersDest[i] + -player.direction.normalized * tileWidth;
-          playersSqrLegDistance[i] = sqrTileWidth;
         }
       }
 
       // Check for arrive.
-      if (sqrBeforeDist < playersSqrLegDistance[i] && sqrAfterDist >= playersSqrLegDistance[i]) {
+      if (sqrBeforeDist < sqrTileWidth && sqrAfterDist >= sqrTileWidth) {
         player.transform.position = playersDest[i];
-        if (playersDestTile[i] != null) playersDestTile[i].SendMessage("OnPlayerArrive", player);
+
+        // Don't interact with tile if jumping.
+        if (!player.IsJumping()) {
+          if (playersDestTile[i] != null) playersDestTile[i].SendMessage("OnPlayerArrive", player);
+        }
 
         playersSrcTile[i] = playersDestTile[i];
         playersDestTile[i] = getNextTile(playersSrcTile[i], player.direction);
         playersSrc[i] = player.transform.position;
         playersDest[i] = playersDestTile[i].transform.position;
-        playersSqrLegDistance[i] = (playersDest[i] - playersSrc[i]).sqrMagnitude;
       }
     }
   }
@@ -227,10 +284,12 @@ public class GameManager : MonoBehaviour {
     var normDir = direction.normalized;
     var dirX = Vector3.Dot(direction, Vector3.right);
     var dirY = Vector3.Dot(direction, Vector3.up);
-    x += dirX > 0 ? 1 : dirX < 0 ? -1 : 0;
-    y += dirY > 0 ? -1 : dirY < 0 ? 1 : 0;
+Debug.Log("dirX: " + dirX + ", dirY:" + dirY);
+    x += dirX > 0.3f ? 1 : dirX < -0.3f ? -1 : 0;
+    y += dirY > 0.3f ? -1 : dirY < -0.3f ? 1 : 0;
 
     // Wrap X and Y.
+Debug.Log("pre X: " + x + ", pre Y:" + y);
     if (x < 0) x = boardWidth + x;
     if (x >= boardWidth) x = x % boardWidth;
     if (y < 0) y = boardHeight + y;

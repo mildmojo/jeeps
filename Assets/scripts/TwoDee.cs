@@ -25,6 +25,6 @@ public class TwoDee {
                             set { gameObject.transform.parent = value; } }
 
   private Vector3 dimensions() {
-    return gameObject.GetComponent<Renderer>().bounds.size;
+    return gameObject.GetComponent<SpriteRenderer>().bounds.size;
   }
 }

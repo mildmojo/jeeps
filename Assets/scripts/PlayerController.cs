@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 
 public class PlayerController : MonoBehaviour {
-  public bool isJumping;
   public bool isMoving;
   public Vector3 direction = Vector3.up;
 
@@ -12,27 +11,69 @@ public class PlayerController : MonoBehaviour {
   public string buttonName;
 
   private bool isRebinding = false;
-  private KeyCode buttonCode;
+  private bool startedJump;
+  private bool isJumping;
+  private float travelLength;
+  private float travelPct;
+  private KeyCode buttonCode = KeyCode.None;
   private AnyInput anyInput;
+  private Vector3 originalScale;
+  private Animator animator;
 
   private static List<KeyCode> inputButtonRegistry = new List<KeyCode>();
 
-  // Use this for initialization
-  void Start () {
-    anyInput = AnyInput.instance;
+  private static bool registerButton(KeyCode button) {
+    if (inputButtonRegistry.Contains(button)) return false;
+    inputButtonRegistry.Add(button);
+    return true;
   }
 
-  // Update is called once per frame
+  private static void unregisterButton(KeyCode button) {
+    inputButtonRegistry.Remove(button);
+  }
+
+  void Start () {
+    anyInput = AnyInput.instance;
+    originalScale = transform.localScale;
+    animator = transform.FindChild("JeepSprite").gameObject.GetComponent<Animator>();
+  }
+
   void Update () {
-    if (isRebinding) {
-      var pressedInputs = anyInput.GetAllPressed().Where(code => !inputButtonRegistry.Contains(code));
-      if (pressedInputs.Any()) {
-        var code = pressedInputs.First();
-        inputButtonRegistry.Add(code);
-        SetInputButton(code);
+    UpdateJump();
+    UpdateRebind();
+  }
+
+  void UpdateJump() {
+    startedJump = false;
+    if (buttonCode != KeyCode.None && Input.GetKey(buttonCode)) {
+      startedJump = !isJumping;
+      isJumping = true;
+    }
+
+    if (isJumping) {
+      isJumping = travelPct <= 1f;
+      // foreach (AnimationState state in jumpAnimation) {
+      //   state.normalizedTime = travelPct;
+      // }
+      animator.Play("JeepJump", -1, travelPct);
+    }
+  }
+
+  void UpdateRebind() {
+    if (!isRebinding) return;
+
+    var pressedInputs = anyInput.GetAllPressed();
+    for (var i = 0; i < pressedInputs.Count; i++) {
+      if (registerButton(pressedInputs[i])) {
+        SetInputButton(pressedInputs[i]);
         StopInputRebind();
+        break;
       }
     }
+  }
+
+  public void OnArrive() {
+    isJumping = false;
   }
 
   public void SetInputButton(KeyCode code) {
@@ -42,7 +83,11 @@ public class PlayerController : MonoBehaviour {
   }
 
   public void StartInputRebind() {
+    unregisterButton(buttonCode);
+    buttonCode = KeyCode.None;
     isRebinding = true;
+    BroadcastMessage("RandomizeSprite", SendMessageOptions.DontRequireReceiver);
+    UpdateRebind();
   }
 
   public void StopInputRebind() {
@@ -53,4 +98,23 @@ public class PlayerController : MonoBehaviour {
     direction = newDirection;
     transform.up = direction;
   }
+
+  public void SetTravelDist(float dist) {
+    travelLength = dist;
+    travelPct = 0f;
+  }
+
+  public void Travel(float dist) {
+    travelPct += dist / travelLength;
+  }
+
+  public bool StartedJump() {
+    return startedJump;
+  }
+
+  public bool IsJumping() {
+    return isJumping;
+  }
 }
+
+
