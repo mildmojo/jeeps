@@ -63,12 +63,24 @@ public class PlayerController : MonoBehaviour {
     if (!isRebinding) return;
 
     var pressedInputs = anyInput.GetAllPressed();
+// Debug.Log("Saw keys: " + pressedInputs.Select(x => x.ToString()).Aggregate("", (sum, str) => sum + "," + str));
     for (var i = 0; i < pressedInputs.Count; i++) {
-      if (registerButton(pressedInputs[i])) {
-        SetInputButton(pressedInputs[i]);
-        StopInputRebind();
+      if (buttonCode == KeyCode.None && registerButton(pressedInputs[i])) {
+        BindInputButton(pressedInputs[i]);
+        GameManager.instance.AddPlayer(this);
+Debug.Log("Player controller added " + buttonCode + " (" + Time.frameCount + " " + i + ")");
         break;
+      } else if (buttonCode == pressedInputs[i]) {
+Debug.Log("Player controller resumed " + buttonCode + " (" + Time.frameCount + " " + i + ")");
+        GameManager.instance.AddPlayer(this);
       }
+    }
+
+    var releasedInputs = anyInput.GetAllReleased();
+    if (releasedInputs.Contains(buttonCode)) {
+      // unregisterButton(buttonCode);
+      // UnbindInputButton();
+      GameManager.instance.RemovePlayer(this);
     }
   }
 
@@ -76,10 +88,16 @@ public class PlayerController : MonoBehaviour {
     isJumping = false;
   }
 
-  public void SetInputButton(KeyCode code) {
+  public void BindInputButton(KeyCode code) {
     buttonCode = code;
     buttonName = AllButtons.namesByValue[code];
     if (OnRebind != null) OnRebind(code);
+  }
+
+  public void UnbindInputButton() {
+    unregisterButton(buttonCode);
+    buttonCode = KeyCode.None;
+    buttonName = "";
   }
 
   public void StartInputRebind() {
@@ -87,7 +105,6 @@ public class PlayerController : MonoBehaviour {
     buttonCode = KeyCode.None;
     isRebinding = true;
     BroadcastMessage("RandomizeSprite", SendMessageOptions.DontRequireReceiver);
-    UpdateRebind();
   }
 
   public void StopInputRebind() {

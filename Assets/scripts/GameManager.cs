@@ -5,11 +5,14 @@ using System.Collections.Generic;
 using System.Linq;
 
 public class GameManager : MonoBehaviour {
+  public static GameManager instance;
+
   public Sprite stoneTileSprite;
   public Sprite iceTileSprite;
   public GameObject stoneTilePrefab;
   public GameObject iceTilePrefab;
   public GameObject playerPrefab;
+  public GameObject upArrowTilePrefab;
   [RangeAttribute(1, 10)]
   public int maxPlayers;
   public int boardWidth;
@@ -26,6 +29,7 @@ public class GameManager : MonoBehaviour {
 
   private CanvasGroup cgTimerText;
   private List<PlayerController> _players = new List<PlayerController>();
+  private List<PlayerController> _activePlayers = new List<PlayerController>();
   private float _countdownTimer;
   private List<Tile> board;
   private ShuffleDeck tileDeck;
@@ -38,6 +42,13 @@ public class GameManager : MonoBehaviour {
   private List<Tile> playersDestTile = new List<Tile>();
 
   void Awake() {
+    if (GameManager.instance == null) {
+      GameManager.instance = this;
+    } else {
+      this.enabled = false;
+      return;
+    }
+
     for (var i = 0; i < maxPlayers; i++) {
       var newPlayer = Instantiate(playerPrefab);
       _players.Add(newPlayer.GetComponent<PlayerController>());
@@ -47,8 +58,8 @@ public class GameManager : MonoBehaviour {
     cgTimerText = timerText.GetComponent<CanvasGroup>();
 
     _updateActions = new Dictionary<int, System.Action> {
-      { GameState.ATTRACT,  CheckStart },
-      { GameState.SETUP,    CountdownToStart },
+      { GameState.ATTRACT,  CheckStartTick },
+      { GameState.SETUP,    CountdownToStartTick },
       { GameState.INIT,     () => {} },
       { GameState.PLAYING,  GameplayTick },
       { GameState.GAMEOVER, () => {} },
@@ -90,12 +101,53 @@ public class GameManager : MonoBehaviour {
 
   void ResetPlayers() {
     var marginLeft = Mathf.FloorToInt((boardWidth - _players.Count) / 2f);
+    playersSrc.Clear();
+    playersDest.Clear();
+    _activePlayers.Clear();
     for (var i = 0; i < _players.Count; i++) {
       var player = _players[i];
       var player2d = new TwoDee(player.gameObject.transform.FindChild("JeepSprite").gameObject);
-      player.transform.position = new Vector2(board[marginLeft + i].transform.position.x, -player2d.height);
+      var tile2d = new TwoDee(getTile(marginLeft + i, 0).gameObject);
+      player.transform.position = new Vector2(tile2d.x, -player2d.height);
+      playersSrc.Add(player.transform.position);
+      playersDest.Add(player.transform.position);
 Debug.Log(player.transform.position);
     }
+  }
+
+  public void AddPlayer(PlayerController player) {
+    // Animate player to starting position
+
+    var marginLeft = Mathf.FloorToInt((boardWidth - _players.Count) / 2f);
+    var playerIdx = _players.IndexOf(player);
+    var tile2d = new TwoDee(getTile(marginLeft + playerIdx, boardHeight - 1).gameObject);
+    var x = tile2d.x;
+    var player2d = new TwoDee(player.gameObject.transform.FindChild("JeepSprite").gameObject);
+    var playerOffScreenPos = new Vector2(x, -player2d.height);
+    var playerStartingPos = new Vector2(x, tile2d.y - tile2d.height);
+Debug.DrawLine(playerOffScreenPos, playerStartingPos, Color.red, 3f);
+    playersSrc[playerIdx] = playerOffScreenPos;
+    playersDest[playerIdx] = playerStartingPos;
+    player.direction = (playersDest[playerIdx] - playersSrc[playerIdx]).normalized;
+    player.transform.up = player.direction;
+    _activePlayers.Add(player);
+Debug.Log("player " + playerIdx + " added at " + player2d.x + "," + player2d.y);
+  }
+
+  public void RemovePlayer(PlayerController player) {
+    var marginLeft = Mathf.FloorToInt((boardWidth - _players.Count) / 2f);
+    var playerIdx = _players.IndexOf(player);
+    var tile2d = new TwoDee(getTile(marginLeft + playerIdx, boardHeight - 1).gameObject);
+    var x = tile2d.x;
+    var player2d = new TwoDee(player.gameObject.transform.FindChild("JeepSprite").gameObject);
+    var playerOffScreenPos = new Vector2(x, -player2d.height);
+    var playerStartingPos = new Vector2(x, tile2d.y - tile2d.height);
+    playersSrc[playerIdx] = playerStartingPos;
+    playersDest[playerIdx] = playerOffScreenPos;
+    player.direction = (playersDest[playerIdx] - playersSrc[playerIdx]).normalized;
+    player.transform.up = player.direction;
+    _activePlayers.Remove(player);
+Debug.Log("player " + playerIdx + " removed");
   }
 
   void OnStateChange(int oldState, int newState) {
@@ -148,7 +200,11 @@ Debug.Log(player.transform.position);
 
     for (var i = 0; i < board.Count; i++) {
       var tile = board[i];
-      if (Random.Range(0f, 1f) < boardDensity) {
+      var row = i / boardWidth;
+      var col = i % boardWidth;
+      if (row == 0 || row == boardHeight - 1) {
+        newTileObject = (GameObject) Instantiate(upArrowTilePrefab, tile.transform.position, Quaternion.identity);
+      } else if (Random.Range(0f, 1f) < boardDensity) {
         newTileObject = (GameObject) Instantiate((GameObject) tileDeck.Draw(), tile.transform.position, Quaternion.identity);
       } else {
         newTileObject = (GameObject) Instantiate(stoneTilePrefab, tile.transform.position, Quaternion.identity);
@@ -162,13 +218,33 @@ Debug.Log(player.transform.position);
     }
   }
 
-  void CheckStart() {
+  void CheckStartTick() {
     if (AnyInput.instance.WasPressed()) {
       GameState.SetState(GameState.SETUP);
     }
   }
 
-  void CountdownToStart() {
+  void AnimateStartingPlayersTick() {
+    for (var i = 0; i < _players.Count; i++) {
+      var player = _players[i];
+      var playerIdx = i; //_players.IndexOf(player);
+      var vecTravel = player.direction * 3 * gameSpeed * Time.deltaTime;
+
+      // If the amount to travel is more than remaining distance, warp to dest. Otherwise, animate.
+      if (vecTravel.sqrMagnitude > (playersDest[playerIdx] - player.transform.position).sqrMagnitude) {
+        player.transform.position = playersDest[playerIdx];
+        if (player.transform.position.y < 0f) {
+          player.UnbindInputButton();
+        }
+      } else {
+        player.transform.Translate(vecTravel, Space.World);
+      }
+    }
+  }
+
+  void CountdownToStartTick() {
+    AnimateStartingPlayersTick();
+
     _countdownTimer -= Time.deltaTime;
 
     // All buttons released? Return to attract mode.
@@ -190,15 +266,18 @@ Debug.Log(player.transform.position);
 
       playersSrc.Clear();
       playersDest.Clear();
-      for (var i = 0; i < _players.Count; i++) {
-        var player = _players[i];
+      _players.ForEach(player => player.StopInputRebind());
+Debug.Log("Active players: " + _activePlayers.Count);
+      for (var i = 0; i < _activePlayers.Count; i++) {
+        var player = _activePlayers[i];
+        var playerIdx = _players.IndexOf(player);
         var startingPos = player.transform.position;
-        var startingTile = getTile(i + 2, boardHeight - 1);
+        var startingTile = getTile(playerIdx + 2, boardHeight - 1);
         playersSrc.Add(new Vector2(startingPos.x, startingPos.y));
         playersDest.Add(new Vector2(startingTile.transform.position.x, startingTile.transform.position.y));
         playersSrcTile.Add(null);
         playersDestTile.Add(startingTile);
-        player.SetDirection(playersDest[i] - playersSrc[i]);
+        player.SetDirection(playersDest[playerIdx] - playersSrc[playerIdx]);
       }
 
       GameState.SetState(GameState.PLAYING);
@@ -209,15 +288,16 @@ Debug.Log(player.transform.position);
     var tileWidth = new TwoDee(board[0].gameObject).width;
     var sqrTileWidth = Mathf.Pow(tileWidth, 2);
 
-    for (var i = 0; i < _players.Count; i++) {
-      var player = _players[i];
+    for (var i = 0; i < _activePlayers.Count; i++) {
+      var player = _activePlayers[i];
+      var playerIdx = _players.IndexOf(player);
 
-      var sqrBeforeDist = (player.transform.position - (Vector3) playersSrc[i]).sqrMagnitude;
+      var sqrBeforeDist = (player.transform.position - (Vector3) playersSrc[playerIdx]).sqrMagnitude;
       var vecTravel = player.direction * gameSpeed * Time.deltaTime;
       player.transform.Translate(vecTravel, Space.World);
-      var sqrAfterDist = (player.transform.position - (Vector3) playersSrc[i]).sqrMagnitude;
+      var sqrAfterDist = (player.transform.position - (Vector3) playersSrc[playerIdx]).sqrMagnitude;
 
-Debug.DrawRay(player.transform.position, (Vector3) playersDest[i] - player.transform.position);
+Debug.DrawRay(player.transform.position, (Vector3) playersDest[playerIdx] - player.transform.position);
 
       // This may mess up if jump happens before tile midpoint; animation may
       // jump to 0.25, then go back to 0, then up to 1.0.
@@ -231,31 +311,31 @@ Debug.DrawRay(player.transform.position, (Vector3) playersDest[i] - player.trans
       if (sqrBeforeDist < sqrTileWidth/2f && sqrAfterDist >= sqrTileWidth/2f) {
         // Don't interact with tile if jumping.
         if (!player.IsJumping()) {
-          if (playersSrcTile[i] != null) playersSrcTile[i].SendMessage("OnPlayerExit", player);
-          if (playersDestTile[i] != null) playersDestTile[i].SendMessage("OnPlayerEnter", player);
+          if (playersSrcTile[playerIdx] != null) playersSrcTile[playerIdx].SendMessage("OnPlayerExit", player, SendMessageOptions.DontRequireReceiver);
+          if (playersDestTile[playerIdx] != null) playersDestTile[playerIdx].SendMessage("OnPlayerEnter", player, SendMessageOptions.DontRequireReceiver);
         }
         // Need to wrap?
-        if (Vector3.Dot(playersDest[i] - playersSrc[i], player.direction) < 0) {
+        if (Vector3.Dot(playersDest[playerIdx] - playersSrc[playerIdx], player.direction) < 0) {
           // Place player on the outer edge of the tile on the opposite side of the board.
-          player.transform.position = playersDest[i] + -player.direction.normalized * tileWidth/2f;
+          player.transform.position = playersDest[playerIdx] + -player.direction.normalized * tileWidth/2f;
           // Pretend player is coming from midpoint of non-existent tile off the edge of the board.
-          playersSrc[i] = playersDest[i] + -player.direction.normalized * tileWidth;
+          playersSrc[playerIdx] = playersDest[playerIdx] + -player.direction.normalized * tileWidth;
         }
       }
 
       // Check for arrive.
       if (sqrBeforeDist < sqrTileWidth && sqrAfterDist >= sqrTileWidth) {
-        player.transform.position = playersDest[i];
+        player.transform.position = playersDest[playerIdx];
 
         // Don't interact with tile if jumping.
         if (!player.IsJumping()) {
-          if (playersDestTile[i] != null) playersDestTile[i].SendMessage("OnPlayerArrive", player);
+          if (playersDestTile[playerIdx] != null) playersDestTile[playerIdx].SendMessage("OnPlayerArrive", player, SendMessageOptions.DontRequireReceiver);
         }
 
-        playersSrcTile[i] = playersDestTile[i];
-        playersDestTile[i] = getNextTile(playersSrcTile[i], player.direction);
-        playersSrc[i] = player.transform.position;
-        playersDest[i] = playersDestTile[i].transform.position;
+        playersSrcTile[playerIdx] = playersDestTile[playerIdx];
+        playersDestTile[playerIdx] = getNextTile(playersSrcTile[playerIdx], player.direction);
+        playersSrc[playerIdx] = player.transform.position;
+        playersDest[playerIdx] = playersDestTile[playerIdx].transform.position;
       }
     }
   }
